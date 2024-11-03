@@ -31,14 +31,14 @@ export class Database {
     console.log(`Disconnected from database ${this.dbName}`);
   }
 
-  public async getCollection(collectionName: string): Promise<Collection> {
+  public async getCollection(collectionName: string, indexing?: string[]): Promise<Collection> {
     try {
         if (!this.db) {
             throw new DatabaseError("Database not connected");
         }
 
         const collection = this.db.collection(collectionName);
-
+        // TODO: add indexing handle for multiple collection
         // setup index for required search fields
         await collection.createIndex({ accountNumber: 1, identityNumber: 1}, { unique: true });
 
