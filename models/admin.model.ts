@@ -9,7 +9,7 @@ export const adminSchema = z.object({
 export const adminResponseSchema = z.object({
     _id: z.instanceof(ObjectId),
     username: z.string(),
-    token: z.string(),
+    password: z.string()
 })
 
 export type AdminRequest = z.infer<typeof adminSchema>;

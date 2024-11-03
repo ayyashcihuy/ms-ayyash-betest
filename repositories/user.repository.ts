@@ -46,7 +46,7 @@ export class UserRepository implements IUser {
 
         const sanitizedUsers = rawUsers.map((user) => {
             return {
-                _id: user._id,
+                _id: user._id.toString(),
                 userName: user.userName,
                 emailAddress: user.emailAddress,
                 accountNumber: user.accountNumber,

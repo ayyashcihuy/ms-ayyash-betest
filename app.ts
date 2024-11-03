@@ -6,18 +6,23 @@ import { UserRepository } from "./repositories/user.repository";
 import UserController from "./controllers/user.controller";
 import { AdminController } from "./controllers/admin.controller";
 import { AdminRepository } from "./repositories/admin.repository";
+import { AuthService } from "./services/auth.service";
+import { AdminRouter } from "./routes/admin.route";
 
 const mongodUri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const dbName = process.env.DB_NAME || "mydb";
 const port = process.env.PORT || 3000;
 const userCollectionName = process.env.COLLECTION_NAME || "users";
 const adminCollectionName = process.env.COLLECTION_NAME || "admins";
+const secret = process.env.SECRET || "secret";
+const expiresIn = process.env.EXPIRES_IN || "1h";
 
 const database = new Database(mongodUri, dbName);
 
 (async () => {
   // Connect to database
   await database.connect();
+  const auth = new AuthService({ secret, expiresIn });
 
   // Get collection
   const userCollection = await database.getCollection(userCollectionName, { accountNumber: 1, identityNumber: 1 });
@@ -25,7 +30,7 @@ const database = new Database(mongodUri, dbName);
   const userRepository = new UserRepository(userCollection);
   const adminRepository = new AdminRepository(adminCollection);
   const userController = new UserController(userRepository);
-  const adminController = new AdminController(adminRepository);
+  const adminController = new AdminController(adminRepository, auth);
 
   // declare app
   const app = express();
@@ -51,7 +56,8 @@ const database = new Database(mongodUri, dbName);
     next();
   });
 
-  app.use("/api/v1/users", UserRouter(userController));
+  app.use("/api/v1/admin", AdminRouter(adminController));
+  app.use("/api/v1/user", (req, res, next) => auth.authenticate(req, res, next), UserRouter(userController));
 
   app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
