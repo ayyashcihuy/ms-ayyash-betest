@@ -1,4 +1,3 @@
-import { ObjectId } from "mongodb";
 import { z } from "zod";
 
 export const userSchema = z.object({
@@ -12,10 +11,11 @@ export const userSchema = z.object({
 })
 
 export const UserResponseSchema = z.object({
-    _id: z.instanceof(ObjectId),
+    _id: z.string(),
     userName: z.string(),
     emailAddress: z.string(),
     accountNumber: z.number(),
+    identityNumber: z.string(),
 })
 
 export type UserRequest = z.infer<typeof userSchema>;

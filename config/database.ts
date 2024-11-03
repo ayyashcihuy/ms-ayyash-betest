@@ -7,22 +7,22 @@ export class Database {
 
   constructor(private readonly url: string, private readonly dbName: string) {
     this.client = new MongoClient(this.url, {
-        maxPoolSize: 10,
-        minPoolSize: 5,
-        waitQueueTimeoutMS: 1000,
-        maxIdleTimeMS: 30000
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      waitQueueTimeoutMS: 1000,
+      maxIdleTimeMS: 30000
     });
   }
 
   // Start Connection to database
   public async connect() {
     try {
-        await this.client.connect();
-        this.db = this.client.db(this.dbName);
-        // Using console log to print the connection string
-        console.log(`Connected to database ${this.dbName}`);
+      await this.client.connect();
+      this.db = this.client.db(this.dbName);
+      // Using console log to print the connection string
+      console.log(`Connected to database ${this.dbName}`);
     } catch (error) {
-        throw new DatabaseError(`Error connecting to database. Reason: ${error}`);
+      throw new DatabaseError(`Error connecting to database. Reason: ${error}`);
     }
   }
 
@@ -31,20 +31,20 @@ export class Database {
     console.log(`Disconnected from database ${this.dbName}`);
   }
 
-  public async getCollection(collectionName: string, indexing?: string[]): Promise<Collection> {
+  public async getCollection(collectionName: string, indexing?: { [key: string]: 1 }): Promise<Collection> {
     try {
-        if (!this.db) {
-            throw new DatabaseError("Database not connected");
-        }
+      if (!this.db) {
+        throw new DatabaseError("Database not connected");
+      }
 
-        const collection = this.db.collection(collectionName);
-        // TODO: add indexing handle for multiple collection
-        // setup index for required search fields
-        await collection.createIndex({ accountNumber: 1, identityNumber: 1}, { unique: true });
+      const collection = this.db.collection(collectionName);
+      // TODO: add indexing handle for multiple collection
+      // setup index for required search fields
+      await collection.createIndex(indexing ? indexing : {}, { unique: true });
 
-        return collection;
+      return collection;
     } catch (error) {
-        throw new DatabaseError(`Error getting collection ${collectionName}. Reason: ${error}`);
+      throw new DatabaseError(`Error getting collection ${collectionName}. Reason: ${error}`);
     }
   }
 }

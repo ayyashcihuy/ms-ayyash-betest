@@ -1,4 +1,6 @@
+import { AdminRequest, AdminResponse } from "../models/admin.model";
+
 export interface IAdmin {
-    login(username: string, password: string): Promise<string>;
-    register(username: string, password: string): Promise<void>;
+    login(data: AdminRequest): Promise<AdminResponse>;
+    register(data: AdminRequest): Promise<void>;
 }
