@@ -1,46 +1,41 @@
 import { DatabaseError } from "../errors/database.error";
 import { Issue, ValidationError } from "../errors/validation.error";
-import { IAdmin } from "../interfaces/admin.interface";
-import { type Request, type Response } from "express";
+import { IAuthentication } from "../interfaces/auth.interface";
+import { NextFunction, type Request, type Response } from "express";
 import { adminSchema } from "../models/admin.model";
 import { AuthService } from "../services/auth.service";
 import { AuthenticationError } from "../errors/authentication.error";
 
 export class AdminController {
-    private readonly adminRepository: IAdmin;
+    private readonly adminRepository: IAuthentication;
     private readonly auth: AuthService;
 
-    constructor(adminRepository: IAdmin, auth: AuthService) {
+    constructor(adminRepository: IAuthentication, auth: AuthService) {
         this.adminRepository = adminRepository;
         this.auth = auth;
     }
 
-    async Login(req: Request, res: Response): Promise<void> {
+    async Login(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const rawBody = req.body;
             const validatedResponseBody = await adminSchema.safeParseAsync(rawBody);
 
             if (validatedResponseBody.success) {
-                const user = await this.adminRepository.login(validatedResponseBody.data);
-
-                const isValidated = await this.auth.comparePassword(validatedResponseBody.data.password, user.password);
+                const userPassword = await this.adminRepository.getAdminData(validatedResponseBody.data);
+                const isValidated = await this.auth.comparePassword(validatedResponseBody.data.password, userPassword);
 
                 if (!isValidated) {
                     throw new AuthenticationError("Invalid password");
                 }
 
-                const token = this.auth.generateToken(validatedResponseBody.data.username);
+                const tokenSet = await this.adminRepository.requestToken(validatedResponseBody.data);
 
-                res.cookie("token", token, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: "strict",
-                    expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
-                });
+                const expiresAt = new Date()
+                expiresAt.setHours(expiresAt.getHours() + 48);
 
-                res.status(200).json({
-                    message: "Login",
-                })
+                res.setHeader("Content-Type", "application/json");
+                res.setHeader("Set-Cookie", `accessToken=${tokenSet.accessToken}; Max-Age=${60 * 60 * 48}; Expires=${expiresAt.toUTCString()}; httpOnly; secure; sameSite=strict`);
+                res.status(200).json(tokenSet);
             } else {
                 const issues: Issue[] = [];
 
@@ -53,12 +48,14 @@ export class AdminController {
 
                 throw new ValidationError(issues);
             }
+
+            next();
         } catch (error) {
-            this.errorHandler(error, res);
+            next(error);
         }
     }
 
-    async Register(req: Request, res: Response): Promise<void> {
+    async Register(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const rawAdmin = req.body;
             const validatedResponseBody = await adminSchema.safeParseAsync(rawAdmin);
@@ -87,15 +84,21 @@ export class AdminController {
                 throw new ValidationError(issues);
             }
         } catch (error) {
-            this.errorHandler(error, res);
+            next(error);
         }
     }
 
-    async Logout(req: Request, res: Response): Promise<void> {
-        res.clearCookie("token");
-        res.status(200).json({
-            message: "Logout",
-        })
+    async Logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            res.setHeader("Content-Type", "application/json");
+            res.setHeader("Set-Cookie", "pans_pengkinian=; HttpOnly; SameSite=Strict; Path=/;");
+            res.status(204).json({
+                message: "Logout success"
+            });
+            next();
+        } catch (error) {
+            next(error);
+        }
     }
 
     private errorHandler(error: unknown, res: Response): void {

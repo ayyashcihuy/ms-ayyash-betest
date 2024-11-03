@@ -1,7 +1,6 @@
-import jwt from "jsonwebtoken";
-import { AuthenticationError } from "../errors/authentication.error";
 import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
+import { IAuthentication } from "../interfaces/auth.interface";
 
 interface JWTPayload {
     secret: string;
@@ -9,10 +8,10 @@ interface JWTPayload {
 }
 
 export class AuthService {
-    private readonly config: JWTPayload;
+    private readonly authenticationService: IAuthentication;
 
-    constructor(config: JWTPayload) {
-        this.config = config;
+    constructor(authentication: IAuthentication) {
+        this.authenticationService = authentication;
     }
 
     public async hashPassword(password: string): Promise<string> {
@@ -23,38 +22,35 @@ export class AuthService {
         return await bcrypt.compare(password, hashedPassword);
     }
 
-    public generateToken(username: string): string {
-        try {
-            return jwt.sign({ username }, this.config.secret, {
-                expiresIn: this.config.expiresIn
+    public async authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+        const bearerToken = req.headers.authorization;
+
+        if (!bearerToken) {
+            res.status(401).json({
+                message: "Authorization header is required"
             });
-        } catch (error) {
-            throw new AuthenticationError("Error generating token");
-        }
-    }
 
-    private verifyToken(token: string): object | string {
-        try {
-            return jwt.verify(token, this.config.secret);
-        } catch (error) {
-            throw new AuthenticationError("Invalid token");
-        }
-    }
-
-    public async authenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
-        const token = req.cookies.token;
-
-        if (!token) {
-            throw new AuthenticationError("Token is required");
+            return;
         }
 
-        const decodedToken = this.verifyToken(token);
+        if (bearerToken === "") {
+            res.status(401).json({
+                message: "Authorization header is required"
+            });
 
-        if (typeof decodedToken === "string") {
-            throw new AuthenticationError("Invalid token");
+            return;
         }
 
-        req.user = decodedToken;
+        const validated = this.authenticationService.validateAccessToken(bearerToken.replace("Bearer ", ""));
+
+        if (!validated) {
+            res.status(401).json({
+                message: "Invalid token"
+            });
+
+            return;
+        }
+
         next();
     }
 }

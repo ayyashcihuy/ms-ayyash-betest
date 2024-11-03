@@ -4,9 +4,9 @@ import { Router } from "express";
 export function AdminRouter(controller: AdminController): Router {
     const router = Router();
 
-    router.post("/login", (req, res) => controller.Login(req, res));
-    router.post("/register", (req, res) => controller.Register(req, res));
-    router.post("logout", (req, res) => controller.Logout(req, res));
+    router.post("/login", (req, res, next) => controller.Login(req, res, next));
+    router.post("/register", (req, res, next) => controller.Register(req, res, next));
+    router.post("logout", (req, res, next) => controller.Logout(req, res, next));
 
     return router;
 }
