@@ -1,5 +1,5 @@
 import { IUser } from "../interfaces/user.interface";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { UserResponseSchema, userSchema } from "../models/user.model";
 import { DatabaseError } from "../errors/database.error";
 import { Issue, ValidationError } from "../errors/validation.error";
@@ -14,7 +14,7 @@ class UserController {
         this._userRepository = userRepository;
     }
 
-    async DeleteUser(req: Request, res: Response): Promise<void> {
+    async DeleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { userId } = req.query;
 
@@ -34,11 +34,11 @@ class UserController {
 
             return;
         } catch (error) {
-            this.errorHandler(error, res);
+            next(error)
         }
     }
 
-    async UpdateUser(req: Request, res: Response): Promise<void> {
+    async UpdateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { userId } = req.query
             const rawUser = req.body;
@@ -73,11 +73,11 @@ class UserController {
                 throw new ValidationError(issues);
             }
         } catch (error) {
-            this.errorHandler(error, res);
+            next(error)
         }
     }
 
-    async GetUsers(req: Request, res: Response): Promise<void> {
+    async GetUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             let { page, limit, accountNumber, identityNumber } = req.query;
 
@@ -99,11 +99,11 @@ class UserController {
                 result
             })
         } catch (error) {
-            this.errorHandler(error, res);
+            next(error)
         }
     }
 
-    async CreateUser(req: Request, res: Response): Promise<void> {
+    async CreateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             // validate user request body
             const rawUser = req.body;
@@ -131,42 +131,8 @@ class UserController {
                 throw new ValidationError(issues);
             }
         } catch (error) {
-            this.errorHandler(error, res);
+            next(error)
         }
-    }
-
-    private errorHandler(error: unknown, res: Response): void {
-        if (error instanceof DatabaseError) {
-            res.status(500).json({
-                message: "Database error",
-                error: error.message,
-            })
-
-            return;
-        }
-
-        if (error instanceof SyntaxError) {
-            res.status(400).json({
-                message: "Invalid user request",
-                error: error.message,
-            })
-
-            return;
-        }
-
-        if (error instanceof ValidationError) {
-            res.status(400).json({
-                message: "Invalid user request body",
-                error: error.issues,
-            })
-
-            return;
-        }
-
-        res.status(500).json({
-            message: "Internal server error",
-            error: error
-        })
     }
 }
 
