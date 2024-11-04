@@ -59,7 +59,7 @@ export class UserRepository implements IUser {
 
     private getPaginationContext(page: number, limit: number): { skip: number, limit: number } {
         return {
-            skip: page * limit,
+            skip: page = 1 ? 0 : page * limit,
             limit: limit
         }
     }

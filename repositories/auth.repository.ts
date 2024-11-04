@@ -5,7 +5,7 @@ import { AuthenticationError } from "../errors/authentication.error";
 import { sign, verify } from "jsonwebtoken";
 import { EmptyArgumentError } from "../errors/emptyArgument.error";
 
-export class AdminRepository implements IAuthentication {
+export class AuthRepository implements IAuthentication {
     private readonly _rsaPrivateKey: string;
     private readonly _rsaPublicKey: string;
 
@@ -25,6 +25,7 @@ export class AdminRepository implements IAuthentication {
         this._rsaPrivateKey = privateKey;
         this._collection = collection;
     }
+
     validateRefreshToken(refreshToken: string): boolean {
         try {
             // The documentation stated:
@@ -80,48 +81,6 @@ export class AdminRepository implements IAuthentication {
             console.log(err)
             return false;
         }
-    }
-    decodeJWT<T>(accessToken: string): Partial<T> {
-        if (accessToken === "" || accessToken === undefined || accessToken === null) {
-            throw new EmptyArgumentError("accessToken cannot be empty");
-        }
-
-        const decodedJWT = verify(
-            accessToken,
-            {
-                key: this._rsaPublicKey,
-                passphrase: "",
-            },
-            {
-                complete: true,
-                algorithms: ["RS256"],
-                issuer: "ayyash-betest",
-                subject: "access"
-            },
-        );
-
-        return decodedJWT.payload as Partial<T>;
-    }
-    decodeRefreshJWT<T>(refreshToken: string): Partial<T> {
-        if (refreshToken === "" || refreshToken === undefined || refreshToken === null) {
-            throw new EmptyArgumentError("refreshToken cannot be empty");
-        }
-
-        const decodedJWT = verify(
-            refreshToken,
-            {
-                key: this._rsaPublicKey,
-                passphrase: "",
-            },
-            {
-                complete: true,
-                algorithms: ["RS256"],
-                issuer: "ayyash-betest",
-                subject: "access"
-            },
-        );
-
-        return decodedJWT.payload as Partial<T>;
     }
 
     public async requestToken(data: AdminRequest): Promise<TokenSet> {
