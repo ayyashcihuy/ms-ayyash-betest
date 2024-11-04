@@ -1,6 +1,6 @@
 import "dotenv/config";
 import fs from "fs";
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import { Database } from "./config/database";
 import { UserRouter } from "./routes/user.route";
@@ -14,6 +14,9 @@ import { AuthenticationError } from "./errors/authentication.error";
 import { DatabaseError } from "./errors/database.error";
 import { ValidationError } from "./errors/validation.error";
 import { EmptyArgumentError } from "./errors/emptyArgument.error";
+import { ClientError } from "./errors/client.error";
+import { MongoServerError } from "mongodb";
+import { RedisClient } from "./config/redis";
 
 const mongodUri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const dbName = process.env.DB_NAME || "mydb";
@@ -22,15 +25,18 @@ const userCollectionName = process.env.COLLECTION_NAME || "users";
 const adminCollectionName = process.env.COLLECTION_NAME || "admins";
 const publicKeyPath = process.env.PATH_TO_PUBLIC_KEY || "";
 const privateKeypath = process.env.PATH_TO_PRIVATE_KEY || "";
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
 const publicKey = fs.readFileSync(publicKeyPath, "utf8");
 const privateKey = fs.readFileSync(privateKeypath, "utf8");
 
 const database = new Database(mongodUri, dbName);
+const redis = new RedisClient(redisUrl);
 
 (async () => {
   // Connect to database
   await database.connect();
+  await redis.connect();
 
   // Get collection
   const userCollection = await database.getCollection(userCollectionName, { accountNumber: 1, identityNumber: 1 });
@@ -38,7 +44,7 @@ const database = new Database(mongodUri, dbName);
   const userRepository = new UserRepository(userCollection);
   const adminRepository = new AdminRepository(adminCollection, publicKey, privateKey);
   const auth = new AuthService(adminRepository);
-  const userController = new UserController(userRepository);
+  const userController = new UserController(userRepository, redis);
   const adminController = new AdminController(adminRepository, auth);
 
   // declare app
@@ -69,7 +75,7 @@ const database = new Database(mongodUri, dbName);
   app.use("/api/v1/admin", AdminRouter(adminController));
   app.use("/api/v1/user", (req, res, next) => auth.authenticate(req, res, next), UserRouter(userController));
 
-  app.use((error: unknown, _: Request, res: Response) => {
+  app.use((error: unknown, _: Request, res: Response, next: NextFunction) => {
     if (error instanceof AuthenticationError) {
       res.status(401).json({
         message: "Authentication error",
@@ -124,10 +130,30 @@ const database = new Database(mongodUri, dbName);
       return;
     }
 
+    if (error instanceof ClientError) {
+      res.status(400).json({
+        message: "Invalid Client request",
+        error: error.message,
+      })
+
+      return;
+    }
+
+    if (error instanceof MongoServerError) {
+      res.status(500).json({
+        message: "MongoDB server error",
+        error: error.message,
+      })
+
+      return;
+    }
+
     res.status(500).json({
       message: "Internal server error",
       error: error,
-    })
+    }).end();
+
+    next();
   });
 
   app.listen(port, () => {

@@ -25,7 +25,11 @@ export class AdminController {
                 const isValidated = await this.auth.comparePassword(validatedResponseBody.data.password, userPassword);
 
                 if (!isValidated) {
-                    throw new AuthenticationError("Invalid password");
+                    res.status(401).json({
+                        message: "Invalid username or password",
+                    })
+
+                    return;
                 }
 
                 const tokenSet = await this.adminRepository.requestToken(validatedResponseBody.data);
@@ -33,8 +37,9 @@ export class AdminController {
                 const expiresAt = new Date()
                 expiresAt.setHours(expiresAt.getHours() + 48);
 
-                res.setHeader("Content-Type", "application/json");
-                res.setHeader("Set-Cookie", `accessToken=${tokenSet.accessToken}; Max-Age=${60 * 60 * 48}; Expires=${expiresAt.toUTCString()}; httpOnly; secure; sameSite=strict`);
+                res.cookie("access_token", tokenSet.accessToken, { httpOnly: true, sameSite: "strict", path: "/", maxAge: 60 * 60 * 48, expires: expiresAt });
+                // res.setHeader("Content-Type", "application/json");
+                // res.setHeader("Set-Cookie", `access_token=${tokenSet.refreshToken}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${60 * 60 * 48}; Expires=${expiresAt.toUTCString()};`);
                 res.status(200).json(tokenSet);
             } else {
                 const issues: Issue[] = [];
@@ -46,7 +51,12 @@ export class AdminController {
                     });
                 })
 
-                throw new ValidationError(issues);
+                res.status(400).json({
+                    message: "Invalid user request body",
+                    error: issues,
+                })
+
+                return;
             }
 
             next();

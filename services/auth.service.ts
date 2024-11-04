@@ -2,11 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { IAuthentication } from "../interfaces/auth.interface";
 
-interface JWTPayload {
-    secret: string;
-    expiresIn: string;
-}
-
 export class AuthService {
     private readonly authenticationService: IAuthentication;
 
@@ -23,31 +18,30 @@ export class AuthService {
     }
 
     public async authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
-        const bearerToken = req.header("authorization");
-        console.log(req.header, "<<<")
+        const access_token = req.cookies.access_token;
 
-        if (!bearerToken) {
+        if (!access_token) {
             res.status(401).json({
                 message: "Authorization header is required"
-            });
+            }).end();
 
             return;
         }
 
-        if (bearerToken === "") {
+        if (access_token === "") {
             res.status(401).json({
                 message: "Authorization header is required"
-            });
+            }).end();
 
             return;
         }
 
-        const validated = this.authenticationService.validateAccessToken(bearerToken.replace("Bearer ", ""));
+        const validated = this.authenticationService.validateAccessToken(access_token.replace("access_token ", ""));
 
         if (!validated) {
             res.status(401).json({
                 message: "Invalid token"
-            });
+            }).end();
 
             return;
         }
