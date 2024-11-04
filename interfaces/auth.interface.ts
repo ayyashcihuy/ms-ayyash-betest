@@ -1,4 +1,4 @@
-import { AdminRequest, AdminResponse } from "../models/admin.model";
+import { AdminRequest } from "../models/admin.model";
 
 export type TokenSet = {
     accessToken: string;
@@ -12,7 +12,5 @@ export interface IAuthentication {
     requestToken(data: AdminRequest): Promise<TokenSet>;
     validateRefreshToken(refreshToken: string): boolean;
     validateAccessToken(accessToken: string): boolean;
-    decodeJWT<T>(accessToken: string): Partial<T>;
-    decodeRefreshJWT<T>(refreshToken: string): Partial<T>;
     register(data: AdminRequest): Promise<void>;
 }
