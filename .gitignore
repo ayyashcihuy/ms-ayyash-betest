@@ -23,6 +23,10 @@
 .idea/**/dictionaries
 .idea/**/shelf
 
+# Custom Private and Public Keys
+private.key
+public.key
+
 # AWS User-specific
 .idea/**/aws.xml
 
