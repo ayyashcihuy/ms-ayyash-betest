@@ -24,6 +24,8 @@
 .idea/**/shelf
 
 # Custom Private and Public Keys
+key.pem
+public.pem
 private.key
 public.key
 

@@ -1,6 +1,6 @@
 import { Collection } from "mongodb";
 import { IAuthentication, TokenSet } from "../interfaces/auth.interface";
-import { AdminRequest, AdminResponse } from "../models/admin.model";
+import { AdminRequest } from "../models/admin.model";
 import { AuthenticationError } from "../errors/authentication.error";
 import { sign, verify } from "jsonwebtoken";
 import { EmptyArgumentError } from "../errors/emptyArgument.error";
@@ -70,14 +70,14 @@ export class AdminRepository implements IAuthentication {
                 },
                 {
                     algorithms: ["RS256"],
-                    issuer: "opening-account-pengkinian-data",
-                    audience: "panin-sekuritas",
+                    issuer: "ayyash-betest",
                     subject: "access"
                 }
             );
 
             return true;
-        } catch {
+        } catch(err) {
+            console.log(err)
             return false;
         }
     }
@@ -166,8 +166,6 @@ export class AdminRepository implements IAuthentication {
 
     public async getAdminData(data: AdminRequest): Promise<string> {
         try {
-            const users = await this._collection.find({}).toArray();
-            console.log(users, "<<<")
             const user = await this._collection.findOne({ username: data.username });
 
             if (!user) {

@@ -1,17 +1,19 @@
 import { IUser } from "../interfaces/user.interface";
 import { NextFunction, Request, Response } from "express";
-import { UserResponseSchema, userSchema } from "../models/user.model";
-import { DatabaseError } from "../errors/database.error";
+import { userSchema } from "../models/user.model";
 import { Issue, ValidationError } from "../errors/validation.error";
 import { ClientError } from "../errors/client.error";
 import { ObjectId } from "mongodb";
+import { RedisClient } from "../config/redis";
 
 
 class UserController {
     private readonly _userRepository: IUser;
+    private readonly _redis: RedisClient;
 
-    constructor(userRepository: IUser) {
+    constructor(userRepository: IUser, redis: RedisClient) {
         this._userRepository = userRepository;
+        this._redis = redis;
     }
 
     async DeleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -80,6 +82,7 @@ class UserController {
     async GetUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             let { page, limit, accountNumber, identityNumber } = req.query;
+            const cacheKey = `users-${page}-${limit}-${accountNumber}-${identityNumber}`;
 
             if (page === undefined) {
                 page = "1";
@@ -93,7 +96,21 @@ class UserController {
                 throw new ClientError("Identity number must be a string");
             }
 
+            const cachedResult = await this._redis.getCache(cacheKey);
+
+            if (cachedResult) {
+                console.log("Get from cached")
+                res.status(200).json({
+                    message: "Success",
+                    result: JSON.parse(cachedResult)
+                })
+
+                return;
+            }
+
             const result = await this._userRepository.getAllUsers(Number(req.query.page), Number(req.query.limit), Number(accountNumber), identityNumber);
+            await this._redis.setCache(cacheKey, JSON.stringify(result), 3600);
+            
             res.status(200).json({
                 message: "Success",
                 result
