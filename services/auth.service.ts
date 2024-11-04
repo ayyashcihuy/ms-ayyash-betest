@@ -23,7 +23,8 @@ export class AuthService {
     }
 
     public async authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
-        const bearerToken = req.headers.authorization;
+        const bearerToken = req.header("authorization");
+        console.log(req.header, "<<<")
 
         if (!bearerToken) {
             res.status(401).json({

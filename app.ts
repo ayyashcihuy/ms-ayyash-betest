@@ -1,5 +1,6 @@
 import "dotenv/config";
-import express, { NextFunction, Request, Response } from "express";
+import fs from "fs";
+import express, { Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import { Database } from "./config/database";
 import { UserRouter } from "./routes/user.route";
@@ -12,14 +13,18 @@ import { AdminRouter } from "./routes/admin.route";
 import { AuthenticationError } from "./errors/authentication.error";
 import { DatabaseError } from "./errors/database.error";
 import { ValidationError } from "./errors/validation.error";
+import { EmptyArgumentError } from "./errors/emptyArgument.error";
 
 const mongodUri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const dbName = process.env.DB_NAME || "mydb";
 const port = process.env.PORT || 3000;
 const userCollectionName = process.env.COLLECTION_NAME || "users";
 const adminCollectionName = process.env.COLLECTION_NAME || "admins";
-const publicKey = process.env.PUBLIC_KEY || "";
-const privateKey = process.env.PRIVATE_KEY || "";
+const publicKeyPath = process.env.PATH_TO_PUBLIC_KEY || "";
+const privateKeypath = process.env.PATH_TO_PRIVATE_KEY || "";
+
+const publicKey = fs.readFileSync(publicKeyPath, "utf8");
+const privateKey = fs.readFileSync(privateKeypath, "utf8");
 
 const database = new Database(mongodUri, dbName);
 
@@ -68,6 +73,24 @@ const database = new Database(mongodUri, dbName);
     if (error instanceof AuthenticationError) {
       res.status(401).json({
         message: "Authentication error",
+        error: error.message,
+      })
+
+      return;
+    }
+
+    if (error instanceof AuthenticationError) {
+      res.status(401).json({
+        message: "Authentication error",
+        error: error.message,
+      })
+
+      return;
+    }
+
+    if (error instanceof EmptyArgumentError) {
+      res.status(400).json({
+        message: "Invalid argument",
         error: error.message,
       })
 
